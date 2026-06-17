@@ -1,106 +1,129 @@
-// TypeScript mirrors of the Postgres tables (handoff §4).
-// Keep these in sync with supabase/migrations.
+// TypeScript mirrors of the v2 Postgres schema (supabase/migrations/0007).
+// Core loop: Dump -> Extract -> Analyze.
 
-export type EntryKind = 'morning' | 'night' | 'adhoc';
-export type ToolCategory = 'morning' | 'nightly' | 'regulation' | 'dopamine';
-export type UrgeKind = 'porn' | 'nicotine' | 'scroll' | 'other';
+export type DumpKind =
+  | 'checkin'
+  | 'journal_morning'
+  | 'journal_evening'
+  | 'urge'
+  | 'adhoc';
 
-export interface Entry {
+export type DumpStatus =
+  | 'pending'
+  | 'transcribing'
+  | 'transcribed'
+  | 'extracting'
+  | 'done'
+  | 'error';
+
+export interface Dump {
   id: string;
   created_at: string;
-  kind: EntryKind;
+  occurred_at: string;
+  kind: DumpKind;
   audio_path: string | null;
   transcript: string | null;
-  processed: boolean;
+  status: DumpStatus;
+  error: string | null;
 }
 
-export interface EntryInsight {
-  id: string;
-  entry_id: string;
-  mood: number | null;
-  energy: number | null;
-  tags: string[];
-  people: string[];
-  stressors: string[];
-  what_helped: string[];
-  summary: string | null;
-  // embedding is server-side only; not surfaced to the client
-}
+export type EventSource = 'ai' | 'manual';
 
-export interface CheckIn {
+/** The generic timestamped tracker row. Named LogEvent to avoid the DOM Event. */
+export interface LogEvent {
   id: string;
   created_at: string;
-  mood: number | null;
-  energy: number | null;
-  activation: number | null;
-  note: string | null;
-}
-
-export interface Tool {
-  id: string;
-  name: string;
-  category: ToolCategory;
-  description: string | null;
-  is_energizing: boolean;
-  media_url: string | null;
-  archived: boolean;
-}
-
-export interface ToolUse {
-  id: string;
-  tool_id: string;
-  used_at: string;
-  duration_min: number | null;
-  note: string | null;
-}
-
-export interface Media {
-  id: string;
-  title: string;
-  url: string;
-  need_tags: string[];
-  source: string | null;
-  archived: boolean;
-}
-
-export interface UrgeEvent {
-  id: string;
   occurred_at: string;
-  kind: UrgeKind;
-  acted_on: boolean | null;
-  rode_out: boolean | null;
-  intensity: number | null;
-  antecedent_state: string | null;
-  antecedent_note: string | null;
-  time_of_day: string | null;
-  underlying_need: string | null;
-  what_helped: string | null;
+  category: string;
+  label: string | null;
+  amount: number | null;
+  unit: string | null;
+  valence: number | null;
+  note: string | null;
+  details: Record<string, unknown>;
+  source: EventSource;
+  source_dump_id: string | null;
+  confidence: number | null;
+  confirmed: boolean;
 }
 
-export interface CoachSession {
-  id: string;
-  urge_event_id: string | null;
-  started_at: string;
-  messages: CoachMessage[];
+/** A candidate event from extraction, shown as a confirm-chip before saving. */
+export interface EventDraft {
+  category: string;
+  label: string | null;
+  amount: number | null;
+  unit: string | null;
+  valence: number | null;
+  occurred_at: string | null;
+  note: string | null;
+  confidence: number;
+  source: EventSource;
+  include: boolean;
 }
 
-export interface CoachMessage {
-  role: 'coach' | 'user';
-  text: string;
-  at: string;
-}
-
-export interface SelfMemo {
+export interface Urge {
   id: string;
   created_at: string;
-  audio_path: string;
-  for_context: string | null;
+  occurred_at: string;
+  initial_dump_id: string | null;
+  followup_dump_id: string | null;
+  intensity: number | null;
+  acted_on: boolean | null;
+  what_helped: string | null;
+  resolved: boolean;
 }
 
-export interface DailyLog {
-  log_date: string;
-  water_note: string | null;
-  food_note: string | null;
-  med_note: string | null;
-  numbing_note: string | null;
+export interface AnalysisItem {
+  item: string;
+  why?: string;
+  evidence?: string;
+}
+
+export interface Recommendation {
+  text: string;
+  rationale?: string;
+}
+
+export interface Analysis {
+  id: string;
+  created_at: string;
+  period_start: string;
+  period_end: string;
+  trigger: 'morning' | 'weekly' | 'manual';
+  model: string | null;
+  summary: string | null;
+  helped: AnalysisItem[];
+  hurt: AnalysisItem[];
+  patterns: string[];
+  recommendations: Recommendation[];
+}
+
+export interface Experiment {
+  id: string;
+  created_at: string;
+  text: string;
+  rationale: string | null;
+  source_analysis_id: string | null;
+  status: 'active' | 'paused' | 'done' | 'dropped';
+  started_on: string | null;
+  ended_on: string | null;
+}
+
+/** UI metadata for event categories (icons used in chips + review). */
+export const CATEGORY_META: Record<string, { label: string; icon: string }> = {
+  food: { label: 'food', icon: '🍽️' },
+  water: { label: 'water', icon: '💧' },
+  medication: { label: 'medication', icon: '💊' },
+  tool: { label: 'tool', icon: '🌿' },
+  sleep: { label: 'sleep', icon: '🌙' },
+  tiredness: { label: 'tiredness', icon: '😴' },
+  mood: { label: 'mood', icon: '🌤️' },
+  activity: { label: 'activity', icon: '🏃' },
+  social: { label: 'social', icon: '💬' },
+  symptom: { label: 'symptom', icon: '🩹' },
+  substance: { label: 'substance', icon: '🚭' },
+};
+
+export function categoryMeta(category: string): { label: string; icon: string } {
+  return CATEGORY_META[category] ?? { label: category, icon: '•' };
 }
