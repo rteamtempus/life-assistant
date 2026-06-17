@@ -41,13 +41,10 @@ testem.log
 .DS_Store
 Thumbs.db
 
-# Secrets — never commit (handoff §6). Edge Function secrets live here.
+# Secrets — never commit (handoff §6). Edge Function secrets (Gemini / TTS keys)
+# live here. The client environment files (Supabase URL + anon key) ARE tracked
+# on purpose — the anon key is public by design and gated by RLS.
 .env
 .env.local
 *.env
 !.env.example
-
-# Client environment files (hold your Supabase keys). Copy the *.example.ts
-# templates to create them locally; the real ones stay out of git.
-/src/environments/environment.ts
-/src/environments/environment.development.ts
