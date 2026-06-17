@@ -48,11 +48,41 @@ export class EventsService {
     return (data ?? []) as LogEvent[];
   }
 
-  update(id: string, patch: Partial<LogEvent>) {
-    return this.supabase.client.from('events').update(patch).eq('id', id);
+  /** Manually add a single event (from the review screen). */
+  async add(e: {
+    category: string;
+    label?: string | null;
+    amount?: number | null;
+    unit?: string | null;
+    note?: string | null;
+    occurred_at: string;
+  }): Promise<void> {
+    const { error } = await this.supabase.client.from('events').insert({
+      category: e.category,
+      label: e.label ?? null,
+      amount: e.amount ?? null,
+      unit: e.unit ?? null,
+      note: e.note ?? null,
+      occurred_at: e.occurred_at,
+      source: 'manual',
+      confirmed: true,
+    });
+    if (error) throw error;
   }
 
-  remove(id: string) {
-    return this.supabase.client.from('events').delete().eq('id', id);
+  async update(id: string, patch: Partial<LogEvent>): Promise<void> {
+    const { error } = await this.supabase.client
+      .from('events')
+      .update(patch)
+      .eq('id', id);
+    if (error) throw error;
+  }
+
+  async remove(id: string): Promise<void> {
+    const { error } = await this.supabase.client
+      .from('events')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   }
 }

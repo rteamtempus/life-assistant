@@ -1,19 +1,34 @@
 @if (pwa.updateReady()) {
   <div class="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-md p-4">
-    <div
-      class="flex items-center justify-between gap-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-lg"
-      role="status"
-    >
+    <div class="flex items-center justify-between gap-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-lg" role="status">
       <span class="text-sm">a fresh version is ready.</span>
-      <button
-        type="button"
-        (click)="pwa.reload()"
-        class="rounded-full bg-calm px-4 py-1.5 text-sm font-medium text-white transition active:scale-95"
-      >
-        reload
-      </button>
+      <button type="button" (click)="pwa.reload()" class="rounded-full bg-calm px-4 py-1.5 text-sm font-medium text-white transition active:scale-95">reload</button>
     </div>
   </div>
+}
+
+@if (supabase.session()) {
+  <header class="mx-auto flex w-full max-w-md items-center px-4 pt-3">
+    <button type="button" (click)="toggle()" aria-label="menu" class="rounded-lg p-2 text-ink-soft active:scale-95">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
+        <line x1="4" y1="7" x2="20" y2="7" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="17" x2="20" y2="17" />
+      </svg>
+    </button>
+  </header>
+}
+
+@if (menuOpen()) {
+  <div class="fixed inset-0 z-40 bg-ink/30" (click)="close()"></div>
+  <nav class="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[80%] flex-col gap-1 bg-canvas p-5 shadow-xl">
+    <p class="px-3 pb-3 pt-1 text-lg font-light text-ink">Life Assistant</p>
+    <a routerLink="/" (click)="close()" class="rounded-xl px-3 py-3 text-ink-soft active:bg-mist">Home</a>
+    <a routerLink="/review" (click)="close()" class="rounded-xl px-3 py-3 text-ink-soft active:bg-mist">Review your data</a>
+    <a routerLink="/analysis" (click)="close()" class="rounded-xl px-3 py-3 text-ink-soft active:bg-mist">Analysis</a>
+    <a routerLink="/urges" (click)="close()" class="rounded-xl px-3 py-3 text-ink-soft active:bg-mist">Urges</a>
+    <div class="mt-auto border-t border-mist pt-2">
+      <button type="button" (click)="signOut()" class="w-full rounded-xl px-3 py-3 text-left text-ink-faint active:bg-mist">Sign out</button>
+    </div>
+  </nav>
 }
 
 <main class="mx-auto min-h-screen w-full max-w-md px-5">

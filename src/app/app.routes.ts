@@ -22,6 +22,14 @@ export const routes: Routes = [
         path: 'urges',
         loadComponent: () => import('./features/urges/urges').then((m) => m.Urges),
       },
+      {
+        path: 'review',
+        loadComponent: () => import('./features/review/review').then((m) => m.Review),
+      },
+      {
+        path: 'analysis',
+        loadComponent: () => import('./features/analysis/analysis').then((m) => m.AnalysisPage),
+      },
     ],
   },
   { path: '**', redirectTo: '' },
