@@ -1,0 +1,5 @@
+-- Local `supabase db reset` seed file.
+--
+-- The starter tool deck now lives in migrations/0004_seed_starter_tools.sql so
+-- it applies to the cloud project too (and is guarded against duplicates). Keep
+-- this file for any local-only dev fixtures you don't want in the real DB.
