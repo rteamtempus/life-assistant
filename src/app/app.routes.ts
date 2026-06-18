@@ -23,6 +23,14 @@ export const routes: Routes = [
         loadComponent: () => import('./features/urges/urges').then((m) => m.Urges),
       },
       {
+        path: 'entries',
+        loadComponent: () => import('./features/entries/entries').then((m) => m.Entries),
+      },
+      {
+        path: 'entries/:id',
+        loadComponent: () => import('./features/entries/entry-detail').then((m) => m.EntryDetail),
+      },
+      {
         path: 'review',
         loadComponent: () => import('./features/review/review').then((m) => m.Review),
       },

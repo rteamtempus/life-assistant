@@ -2,6 +2,7 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { EventsService } from '../../core/events.service';
 import { CATEGORY_META, categoryMeta, LogEvent } from '../../core/models';
+import { isoToLocalInput, localInputToIso } from '../../core/datetime';
 
 interface Group {
   category: string;
@@ -48,6 +49,10 @@ interface Group {
                         <input [(ngModel)]="e.amount" type="number" placeholder="amt" class="w-16 bg-transparent outline-none" />
                         <input [(ngModel)]="e.unit" placeholder="unit" class="w-16 bg-transparent outline-none" />
                         <input [(ngModel)]="e.note" placeholder="note" class="min-w-0 flex-1 bg-transparent outline-none" />
+                      </div>
+                      <div class="flex items-center gap-2 text-sm text-ink-faint">
+                        <span>🕒</span>
+                        <input type="datetime-local" [ngModel]="localTime(e.occurred_at)" (ngModelChange)="e.occurred_at = fromLocalTime($event) ?? e.occurred_at" class="bg-transparent outline-none" />
                       </div>
                       <div class="flex gap-2">
                         <button type="button" (click)="saveEdit(e)" class="rounded-lg bg-calm px-3 py-1.5 text-sm text-white">save</button>
@@ -137,6 +142,14 @@ export class Review implements OnInit {
     return categoryMeta(c);
   }
 
+  protected localTime(iso: string): string {
+    return isoToLocalInput(iso);
+  }
+
+  protected fromLocalTime(value: string): string | null {
+    return localInputToIso(value);
+  }
+
   protected isToday(): boolean {
     return this.day().getTime() === this.startOfToday().getTime();
   }
@@ -182,8 +195,10 @@ export class Review implements OnInit {
         amount: e.amount == null ? null : Number(e.amount),
         unit: e.unit,
         note: e.note,
+        occurred_at: e.occurred_at,
       });
       this.editingId.set(null);
+      await this.refresh();
     } catch (err) {
       this.error.set(this.msg(err));
     }

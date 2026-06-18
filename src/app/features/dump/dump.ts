@@ -8,6 +8,7 @@ import { EventsService } from '../../core/events.service';
 import { UrgesService } from '../../core/urges.service';
 import { CATEGORY_META, DumpKind, EventDraft } from '../../core/models';
 import { promptFor } from '../../core/prompts';
+import { isoToLocalInput, localInputToIso } from '../../core/datetime';
 
 type Phase = 'capture' | 'processing' | 'review' | 'saving' | 'done';
 
@@ -65,9 +66,18 @@ type Phase = 'capture' | 'processing' | 'review' | 'saving' | 'done';
                     <button type="button" (click)="removeDraft($index)" class="text-ink-faint">✕</button>
                   </div>
                   <div class="mt-1 flex items-center gap-2 pl-9 text-sm text-ink-faint">
-                    <input [(ngModel)]="d.amount" type="number" placeholder="amt" class="w-16 bg-transparent outline-none" />
-                    <input [(ngModel)]="d.unit" placeholder="unit" class="w-16 bg-transparent outline-none" />
+                    <input [(ngModel)]="d.amount" type="number" placeholder="amt" class="w-14 bg-transparent outline-none" />
+                    <input [(ngModel)]="d.unit" placeholder="unit" class="w-14 bg-transparent outline-none" />
                     <input [(ngModel)]="d.note" placeholder="note" class="min-w-0 flex-1 bg-transparent outline-none" />
+                  </div>
+                  <div class="mt-1 flex items-center gap-2 pl-9 text-sm text-ink-faint">
+                    <span>🕒</span>
+                    <input
+                      type="datetime-local"
+                      [ngModel]="localTime(d.occurred_at)"
+                      (ngModelChange)="d.occurred_at = fromLocalTime($event)"
+                      class="bg-transparent outline-none"
+                    />
                   </div>
                 </li>
               } @empty {
@@ -224,12 +234,23 @@ export class Dump {
 
   private async runExtraction(transcript: string): Promise<void> {
     this.processingNote.set('making sense of it…');
+    const nowIso = new Date().toISOString();
     try {
-      this.drafts = await this.extraction.extract(transcript, this.kind);
+      const drafts = await this.extraction.extract(transcript, this.kind);
+      // Give every chip a time the user can see/edit (default = now).
+      this.drafts = drafts.map((d) => ({ ...d, occurred_at: d.occurred_at ?? nowIso }));
     } catch {
       this.drafts = []; // extraction is best-effort; you can still add manually
     }
     this.phase.set('review');
+  }
+
+  protected localTime(iso: string | null): string {
+    return isoToLocalInput(iso);
+  }
+
+  protected fromLocalTime(value: string): string | null {
+    return localInputToIso(value);
   }
 
   protected addBlank(): void {
@@ -239,7 +260,7 @@ export class Dump {
       amount: null,
       unit: null,
       valence: null,
-      occurred_at: null,
+      occurred_at: new Date().toISOString(),
       note: null,
       confidence: 1,
       source: 'manual',
@@ -259,7 +280,11 @@ export class Dump {
       if (this.kind === 'urge' && this.dumpId) {
         await this.urges.createForDump(this.dumpId);
       }
-      if (this.dumpId) await this.dumps.setStatus(this.dumpId, 'done');
+      if (this.dumpId) {
+        // Generate the digest used by later analysis (best-effort).
+        await this.dumps.summarize(this.dumpId).catch(() => {});
+        await this.dumps.setStatus(this.dumpId, 'done');
+      }
 
       const n = this.drafts.filter((d) => d.include).length;
       this.savedCount.set(n ? `${n} thing${n === 1 ? '' : 's'} logged` : 'note saved');

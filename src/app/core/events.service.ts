@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { SupabaseService } from './supabase.service';
 import { EventDraft, LogEvent } from './models';
+import { safeTimestamp, toNumberOrNull } from './datetime';
 
 @Injectable({ providedIn: 'root' })
 export class EventsService {
@@ -17,11 +18,13 @@ export class EventsService {
       .map((d) => ({
         category: d.category,
         label: d.label,
-        amount: d.amount,
+        // Coerce to safe types — a stray string time or amount from the model
+        // must not fail the whole insert.
+        amount: toNumberOrNull(d.amount),
         unit: d.unit,
-        valence: d.valence,
+        valence: toNumberOrNull(d.valence),
         note: d.note,
-        occurred_at: d.occurred_at ?? fallbackOccurredAt,
+        occurred_at: safeTimestamp(d.occurred_at, fallbackOccurredAt),
         source: d.source,
         source_dump_id: sourceDumpId,
         confidence: d.source === 'ai' ? d.confidence : null,
@@ -60,10 +63,10 @@ export class EventsService {
     const { error } = await this.supabase.client.from('events').insert({
       category: e.category,
       label: e.label ?? null,
-      amount: e.amount ?? null,
+      amount: toNumberOrNull(e.amount),
       unit: e.unit ?? null,
       note: e.note ?? null,
-      occurred_at: e.occurred_at,
+      occurred_at: safeTimestamp(e.occurred_at, new Date().toISOString()),
       source: 'manual',
       confirmed: true,
     });

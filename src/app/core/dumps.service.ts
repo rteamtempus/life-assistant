@@ -61,4 +61,33 @@ export class DumpsService {
       .update({ status, error: error ?? null })
       .eq('id', id);
   }
+
+  /** Generate (and store) the relevant-data digest for a dump via Edge Function. */
+  async summarize(dumpId: string): Promise<string> {
+    const { data, error } = await this.supabase.invoke<{ summary: string }>(
+      'summarize',
+      { dump_id: dumpId },
+    );
+    if (error) throw error;
+    return data?.summary ?? '';
+  }
+
+  async list(): Promise<Dump[]> {
+    const { data, error } = await this.supabase.client
+      .from('dumps')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as Dump[];
+  }
+
+  async get(id: string): Promise<Dump | null> {
+    const { data, error } = await this.supabase.client
+      .from('dumps')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    return (data as Dump) ?? null;
+  }
 }

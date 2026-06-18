@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
         .order('occurred_at', { ascending: true }),
       supabase
         .from('dumps')
-        .select('kind, occurred_at, transcript')
+        .select('kind, occurred_at, transcript, summary')
         .not('transcript', 'is', null)
         .gte('occurred_at', startIso)
         .lte('occurred_at', endIso)
@@ -89,7 +89,12 @@ Deno.serve(async (req) => {
     const payload = {
       range: { from: period_start, to: period_end },
       events: events.data ?? [],
-      journals_and_checkins: dumps.data ?? [],
+      // Prefer the distilled summary; fall back to the raw transcript.
+      journals_and_checkins: (dumps.data ?? []).map((d) => ({
+        kind: d.kind,
+        occurred_at: d.occurred_at,
+        text: d.summary ?? d.transcript,
+      })),
       urges: urges.data ?? [],
       active_experiments: experiments.data ?? [],
     };

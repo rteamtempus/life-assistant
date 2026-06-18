@@ -23,6 +23,7 @@ export interface Dump {
   kind: DumpKind;
   audio_path: string | null;
   transcript: string | null;
+  summary: string | null;
   status: DumpStatus;
   error: string | null;
 }
