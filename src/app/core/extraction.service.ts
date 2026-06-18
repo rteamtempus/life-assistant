@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { SupabaseService } from './supabase.service';
 import { DumpKind, EventDraft } from './models';
+import { localIsoNow } from './datetime';
 
 @Injectable({ providedIn: 'root' })
 export class ExtractionService {
@@ -14,7 +15,7 @@ export class ExtractionService {
   async extract(transcript: string, kind: DumpKind): Promise<EventDraft[]> {
     const { data, error } = await this.supabase.invoke<{
       events: Omit<EventDraft, 'include' | 'source'>[];
-    }>('extract', { transcript, kind, now: new Date().toISOString() });
+    }>('extract', { transcript, kind, now: localIsoNow() });
     if (error) throw error;
 
     return (data?.events ?? []).map((e) => ({
