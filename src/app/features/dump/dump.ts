@@ -39,6 +39,13 @@ type Phase = 'capture' | 'processing' | 'review' | 'saving' | 'done';
           </div>
         }
 
+        @case ('saving') {
+          <div class="flex flex-1 flex-col items-center justify-center gap-3 text-center">
+            <div class="h-12 w-12 animate-spin rounded-full border-2 border-mist border-t-calm"></div>
+            <p class="text-ink-soft">saving…</p>
+          </div>
+        }
+
         @case ('review') {
           <div class="mt-4 flex-1">
             <h1 class="text-xl font-light text-ink">here's what I caught</h1>
