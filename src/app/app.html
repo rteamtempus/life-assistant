@@ -8,7 +8,7 @@
 }
 
 @if (supabase.session()) {
-  <header class="mx-auto flex w-full max-w-md items-center px-4 pt-3">
+  <header class="mx-auto flex w-full max-w-md items-center justify-end px-4 pt-3">
     <button type="button" (click)="toggle()" aria-label="menu" class="rounded-lg p-2 text-ink-soft active:scale-95">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
         <line x1="4" y1="7" x2="20" y2="7" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="17" x2="20" y2="17" />
@@ -31,6 +31,6 @@
   </nav>
 }
 
-<main class="mx-auto min-h-screen w-full max-w-md px-5">
+<main class="mx-auto w-full max-w-md px-5">
   <router-outlet />
 </main>
