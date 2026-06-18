@@ -70,8 +70,21 @@ export interface Urge {
   followup_dump_id: string | null;
   intensity: number | null;
   acted_on: boolean | null;
+  trigger: string | null;
+  kind: string | null;
   what_helped: string | null;
   resolved: boolean;
+}
+
+/** A candidate urge detected in a dump, shown as a confirm-chip before saving. */
+export interface UrgeDraft {
+  kind: string | null;
+  occurred_at: string | null;
+  acted_on: boolean | null;
+  trigger: string | null;
+  what_helped: string | null;
+  intensity: number | null;
+  include: boolean;
 }
 
 export interface AnalysisItem {

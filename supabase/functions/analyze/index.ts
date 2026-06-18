@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
         .order('occurred_at', { ascending: true }),
       supabase
         .from('urges')
-        .select('occurred_at, acted_on, what_helped')
+        .select('occurred_at, kind, acted_on, trigger, what_helped, intensity')
         .gte('occurred_at', startIso)
         .lte('occurred_at', endIso),
       supabase

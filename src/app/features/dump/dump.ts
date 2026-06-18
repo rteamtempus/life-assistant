@@ -6,7 +6,7 @@ import { DumpsService } from '../../core/dumps.service';
 import { ExtractionService } from '../../core/extraction.service';
 import { EventsService } from '../../core/events.service';
 import { UrgesService } from '../../core/urges.service';
-import { CATEGORY_META, DumpKind, EventDraft } from '../../core/models';
+import { CATEGORY_META, DumpKind, EventDraft, UrgeDraft } from '../../core/models';
 import { promptFor } from '../../core/prompts';
 import { isoToLocalInput, localInputToIso, localIsoNow } from '../../core/datetime';
 
@@ -89,6 +89,32 @@ type Phase = 'capture' | 'processing' | 'review' | 'saving' | 'done';
 
             <button type="button" (click)="addBlank()" class="mt-3 text-sm text-calm">＋ add item</button>
 
+            @if (urgeDrafts.length) {
+              <h2 class="mt-7 text-sm uppercase tracking-wide text-calm-deep">urges I noticed</h2>
+              <p class="text-sm text-ink-soft">log it, and how it went. logging counts either way.</p>
+              <ul class="mt-2 flex flex-col gap-2">
+                @for (u of urgeDrafts; track $index) {
+                  <li class="rounded-2xl px-3 py-2.5 ring-1 transition" [class.bg-surface]="u.include" [class.ring-mist]="u.include" [class.bg-canvas]="!u.include" [class.opacity-50]="!u.include" [class.ring-transparent]="!u.include">
+                    <div class="flex items-center gap-2">
+                      <button type="button" (click)="u.include = !u.include" class="text-lg">{{ u.include ? '✓' : '○' }}</button>
+                      <span class="text-lg">🌊</span>
+                      <select [(ngModel)]="u.kind" class="bg-transparent text-sm text-ink-soft outline-none">
+                        @for (k of urgeKinds; track k) { <option [value]="k">{{ k }}</option> }
+                      </select>
+                      <button type="button" (click)="removeUrge($index)" class="ml-auto text-ink-faint">✕</button>
+                    </div>
+                    <div class="mt-2 flex gap-2 pl-9 text-sm">
+                      <button type="button" (click)="u.acted_on = false" class="flex-1 rounded-lg px-2 py-1.5 ring-1 ring-mist" [class.bg-calm]="u.acted_on === false" [class.text-white]="u.acted_on === false">rode out</button>
+                      <button type="button" (click)="u.acted_on = true" class="flex-1 rounded-lg px-2 py-1.5 ring-1 ring-mist" [class.bg-warm]="u.acted_on === true" [class.text-white]="u.acted_on === true">used</button>
+                      <button type="button" (click)="u.acted_on = null" class="flex-1 rounded-lg px-2 py-1.5 ring-1 ring-mist" [class.bg-ink-faint]="u.acted_on === null" [class.text-white]="u.acted_on === null">unsure</button>
+                    </div>
+                    <input [(ngModel)]="u.trigger" placeholder="trigger — what set it off" class="mt-2 w-full bg-transparent pl-9 text-sm text-ink outline-none" />
+                    <input [(ngModel)]="u.what_helped" placeholder="what helped you through it" class="mt-1 w-full bg-transparent pl-9 text-sm text-ink outline-none" />
+                  </li>
+                }
+              </ul>
+            }
+
             <details class="mt-5 rounded-2xl bg-surface p-3 text-sm ring-1 ring-mist">
               <summary class="cursor-pointer text-ink-soft">what you said</summary>
               <p class="mt-2 whitespace-pre-wrap text-ink-soft">{{ transcript() }}</p>
@@ -158,6 +184,8 @@ export class Dump {
   protected readonly typing = signal(false);
   protected typed = '';
   protected drafts: EventDraft[] = [];
+  protected urgeDrafts: UrgeDraft[] = [];
+  protected readonly urgeKinds = ['porn', 'nicotine', 'scroll', 'other'];
   protected readonly transcript = signal('');
   protected readonly error = signal<string | null>(null);
   protected readonly savedCount = signal('');
@@ -272,11 +300,13 @@ export class Dump {
   private async runExtraction(transcript: string): Promise<void> {
     this.processingNote.set('making sense of it…');
     try {
-      const drafts = await this.extraction.extract(transcript, this.kind, this.referenceIso);
+      const { events, urges } = await this.extraction.extract(transcript, this.kind, this.referenceIso);
       // Give every chip a time the user can see/edit (default = the reference).
-      this.drafts = drafts.map((d) => ({ ...d, occurred_at: d.occurred_at ?? this.fallbackIso }));
+      this.drafts = events.map((d) => ({ ...d, occurred_at: d.occurred_at ?? this.fallbackIso }));
+      this.urgeDrafts = urges.map((u) => ({ ...u, occurred_at: u.occurred_at ?? this.fallbackIso }));
     } catch {
       this.drafts = []; // extraction is best-effort; you can still add manually
+      this.urgeDrafts = [];
     }
     this.phase.set('review');
   }
@@ -308,14 +338,32 @@ export class Dump {
     this.drafts.splice(i, 1);
   }
 
+  protected removeUrge(i: number): void {
+    this.urgeDrafts.splice(i, 1);
+  }
+
   protected async save(): Promise<void> {
     this.phase.set('saving');
     try {
       await this.events.saveDrafts(this.drafts, this.dumpId, this.fallbackIso);
-      // Don't create a duplicate urge row when backfilling an existing urge dump.
-      if (!this.backfill && this.kind === 'urge' && this.dumpId) {
+
+      // Log any urges detected/confirmed in this dump.
+      const urges = this.urgeDrafts.filter((u) => u.include);
+      for (const u of urges) {
+        await this.urges.createDetailed(this.dumpId, {
+          kind: u.kind,
+          occurred_at: u.occurred_at ?? this.fallbackIso,
+          acted_on: u.acted_on,
+          trigger: u.trigger,
+          what_helped: u.what_helped,
+          intensity: u.intensity == null ? null : Number(u.intensity),
+        });
+      }
+      // Dedicated "I'm having an urge" dump with nothing auto-detected: still log it.
+      if (!this.backfill && this.kind === 'urge' && urges.length === 0 && this.dumpId) {
         await this.urges.createForDump(this.dumpId);
       }
+
       if (this.dumpId) {
         // Generate the digest used by later analysis (best-effort).
         await this.dumps.summarize(this.dumpId).catch(() => {});
@@ -323,7 +371,10 @@ export class Dump {
       }
 
       const n = this.drafts.filter((d) => d.include).length;
-      this.savedCount.set(n ? `${n} thing${n === 1 ? '' : 's'} logged` : 'note saved');
+      const parts: string[] = [];
+      if (n) parts.push(`${n} thing${n === 1 ? '' : 's'}`);
+      if (urges.length) parts.push(`${urges.length} urge${urges.length === 1 ? '' : 's'}`);
+      this.savedCount.set(parts.length ? `${parts.join(' · ')} logged` : 'note saved');
       this.doneNote.set(this.kind === 'urge' ? 'logged. that took strength.' : 'got it.');
       this.phase.set('done');
       const dest = this.backfill && this.dumpId ? `/entries/${this.dumpId}` : '/';

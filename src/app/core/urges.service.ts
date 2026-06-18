@@ -22,12 +22,38 @@ export class UrgesService {
     return data as Urge;
   }
 
+  /** Create an urge detected/confirmed from a dump, with its details. */
+  async createDetailed(
+    initialDumpId: string | null,
+    fields: {
+      kind: string | null;
+      occurred_at: string;
+      acted_on: boolean | null;
+      trigger: string | null;
+      what_helped: string | null;
+      intensity: number | null;
+    },
+  ): Promise<void> {
+    const { error } = await this.supabase.client.from('urges').insert({
+      initial_dump_id: initialDumpId,
+      occurred_at: fields.occurred_at,
+      kind: fields.kind,
+      acted_on: fields.acted_on,
+      trigger: fields.trigger,
+      what_helped: fields.what_helped,
+      intensity: fields.intensity,
+      // If we already know whether they acted on it, it's resolved.
+      resolved: fields.acted_on !== null,
+    });
+    if (error) throw error;
+  }
+
   /** Past urges, newest first, with their dump transcripts for review. */
   async listRecent(limit = 30): Promise<UrgeWithDumps[]> {
     const { data, error } = await this.supabase.client
       .from('urges')
       .select(
-        'id, created_at, occurred_at, acted_on, what_helped, resolved, initial_dump_id, followup_dump_id, intensity, ' +
+        'id, created_at, occurred_at, acted_on, kind, trigger, what_helped, resolved, initial_dump_id, followup_dump_id, intensity, ' +
           'initial:initial_dump_id(transcript, created_at), followup:followup_dump_id(transcript, created_at)',
       )
       .order('occurred_at', { ascending: false })

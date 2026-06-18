@@ -27,9 +27,13 @@ import { UrgesService, UrgeWithDumps } from '../../core/urges.service';
         <ul class="mt-6 flex flex-col gap-3">
           @for (u of urges(); track u.id) {
             <li class="rounded-2xl bg-surface p-4 ring-1 ring-mist">
-              <p class="text-xs text-ink-faint">{{ when(u.occurred_at) }}</p>
+              <div class="flex items-baseline justify-between">
+                <span class="text-ink">{{ u.kind || 'urge' }}</span>
+                <span class="text-xs text-ink-faint">{{ when(u.occurred_at) }}</span>
+              </div>
+              @if (u.trigger) { <p class="mt-1 text-sm text-ink-soft">trigger: {{ u.trigger }}</p> }
               @if (u.initial?.transcript) {
-                <p class="mt-1 text-sm text-ink">{{ u.initial?.transcript }}</p>
+                <p class="mt-1 text-sm text-ink-faint">{{ u.initial?.transcript }}</p>
               }
 
               @if (u.resolved) {
