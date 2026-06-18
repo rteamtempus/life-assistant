@@ -51,6 +51,17 @@ export class EventsService {
     return (data ?? []) as LogEvent[];
   }
 
+  /** Whether any events are linked to a given dump (for the backfill button). */
+  async hasEventsForDump(dumpId: string): Promise<boolean> {
+    const { data, error } = await this.supabase.client
+      .from('events')
+      .select('id')
+      .eq('source_dump_id', dumpId)
+      .limit(1);
+    if (error) throw error;
+    return (data?.length ?? 0) > 0;
+  }
+
   /** occurred_at of the most recent event, or null if there are none at all. */
   async mostRecentAt(): Promise<string | null> {
     const { data, error } = await this.supabase.client

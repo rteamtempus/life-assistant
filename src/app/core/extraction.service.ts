@@ -12,10 +12,14 @@ export class ExtractionService {
    * as drafts (pre-selected to include). The user confirms/edits via chips
    * before anything is saved.
    */
-  async extract(transcript: string, kind: DumpKind): Promise<EventDraft[]> {
+  async extract(
+    transcript: string,
+    kind: DumpKind,
+    referenceIso?: string,
+  ): Promise<EventDraft[]> {
     const { data, error } = await this.supabase.invoke<{
       events: Omit<EventDraft, 'include' | 'source'>[];
-    }>('extract', { transcript, kind, now: localIsoNow() });
+    }>('extract', { transcript, kind, now: referenceIso ?? localIsoNow() });
     if (error) throw error;
 
     return (data?.events ?? []).map((e) => ({

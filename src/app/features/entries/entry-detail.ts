@@ -1,6 +1,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DumpsService } from '../../core/dumps.service';
+import { EventsService } from '../../core/events.service';
 import { Dump, DumpKind } from '../../core/models';
 import { KIND_LABEL } from './entries';
 
@@ -11,6 +12,7 @@ import { KIND_LABEL } from './entries';
  */
 @Component({
   selector: 'app-entry-detail',
+  imports: [RouterLink],
   template: `
     <section class="flex min-h-[calc(100dvh-5rem)] flex-col py-4">
       <button type="button" (click)="back()" class="self-start text-sm text-ink-faint">‹ entries</button>
@@ -30,6 +32,12 @@ import { KIND_LABEL } from './entries';
           </button>
         }
 
+        @if (d.transcript && hasEvents() === false) {
+          <a [routerLink]="['/dump/from', d.id]" class="mt-4 inline-block rounded-2xl bg-calm-deep px-4 py-2.5 text-sm font-medium text-white">
+            generate events from this entry
+          </a>
+        }
+
         @if (d.transcript) {
           <details class="mt-6 rounded-2xl bg-surface p-4 ring-1 ring-mist">
             <summary class="cursor-pointer text-sm text-ink-soft">full transcript</summary>
@@ -47,6 +55,7 @@ import { KIND_LABEL } from './entries';
 })
 export class EntryDetail implements OnInit {
   private readonly dumps = inject(DumpsService);
+  private readonly events = inject(EventsService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -54,6 +63,8 @@ export class EntryDetail implements OnInit {
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
+  /** null = unknown, true/false once checked — drives the backfill button. */
+  protected readonly hasEvents = signal<boolean | null>(null);
 
   async ngOnInit(): Promise<void> {
     const id = this.route.snapshot.paramMap.get('id');
@@ -63,6 +74,7 @@ export class EntryDetail implements OnInit {
     }
     try {
       this.dump.set(await this.dumps.get(id));
+      this.hasEvents.set(await this.events.hasEventsForDump(id));
     } catch (e) {
       this.error.set(e instanceof Error ? e.message : String(e));
     } finally {

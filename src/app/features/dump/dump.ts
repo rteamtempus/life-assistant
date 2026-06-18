@@ -8,7 +8,7 @@ import { EventsService } from '../../core/events.service';
 import { UrgesService } from '../../core/urges.service';
 import { CATEGORY_META, DumpKind, EventDraft } from '../../core/models';
 import { promptFor } from '../../core/prompts';
-import { isoToLocalInput, localInputToIso } from '../../core/datetime';
+import { isoToLocalInput, localInputToIso, localIsoNow } from '../../core/datetime';
 
 type Phase = 'capture' | 'processing' | 'review' | 'saving' | 'done';
 
@@ -151,7 +151,8 @@ export class Dump {
   private readonly router = inject(Router);
 
   protected readonly categories = Object.keys(CATEGORY_META);
-  protected readonly kind: DumpKind = this.resolveKind();
+  private readonly backfillId = this.route.snapshot.paramMap.get('dumpId');
+  protected kind: DumpKind = this.resolveKind();
 
   protected readonly phase = signal<Phase>('capture');
   protected readonly typing = signal(false);
@@ -163,7 +164,43 @@ export class Dump {
   protected readonly processingNote = signal('making sense of it…');
 
   private dumpId: string | null = null;
+  // Reference time for resolving spoken times + the fallback for null times.
+  // For a backfill these come from the existing dump, not "now".
+  private backfill = false;
+  private referenceIso = localIsoNow();
+  private fallbackIso = new Date().toISOString();
   protected readonly prompt = signal(promptFor(this.kind, Date.now() / 60000));
+
+  constructor() {
+    if (this.backfillId) {
+      this.backfill = true;
+      void this.loadBackfill(this.backfillId);
+    }
+  }
+
+  /** Backfill mode: re-run extraction over an existing dump (e.g. the app was
+   *  closed before events were generated). Uses the dump's own timestamp. */
+  private async loadBackfill(id: string): Promise<void> {
+    this.phase.set('processing');
+    this.processingNote.set('reading your entry…');
+    try {
+      const dump = await this.dumps.get(id);
+      if (!dump?.transcript) {
+        this.fail(new Error('This entry has no transcript to work from.'));
+        return;
+      }
+      this.kind = dump.kind;
+      this.dumpId = dump.id;
+      this.transcript.set(dump.transcript);
+      // Interpret the dump's instant in the user's local zone so events land on
+      // the correct local day.
+      this.referenceIso = localIsoNow(new Date(dump.occurred_at));
+      this.fallbackIso = dump.occurred_at;
+      await this.runExtraction(dump.transcript);
+    } catch (e) {
+      this.fail(e);
+    }
+  }
 
   private resolveKind(): DumpKind {
     const raw = this.route.snapshot.paramMap.get('kind') ?? 'adhoc';
@@ -234,11 +271,10 @@ export class Dump {
 
   private async runExtraction(transcript: string): Promise<void> {
     this.processingNote.set('making sense of it…');
-    const nowIso = new Date().toISOString();
     try {
-      const drafts = await this.extraction.extract(transcript, this.kind);
-      // Give every chip a time the user can see/edit (default = now).
-      this.drafts = drafts.map((d) => ({ ...d, occurred_at: d.occurred_at ?? nowIso }));
+      const drafts = await this.extraction.extract(transcript, this.kind, this.referenceIso);
+      // Give every chip a time the user can see/edit (default = the reference).
+      this.drafts = drafts.map((d) => ({ ...d, occurred_at: d.occurred_at ?? this.fallbackIso }));
     } catch {
       this.drafts = []; // extraction is best-effort; you can still add manually
     }
@@ -274,10 +310,10 @@ export class Dump {
 
   protected async save(): Promise<void> {
     this.phase.set('saving');
-    const now = new Date().toISOString();
     try {
-      await this.events.saveDrafts(this.drafts, this.dumpId, now);
-      if (this.kind === 'urge' && this.dumpId) {
+      await this.events.saveDrafts(this.drafts, this.dumpId, this.fallbackIso);
+      // Don't create a duplicate urge row when backfilling an existing urge dump.
+      if (!this.backfill && this.kind === 'urge' && this.dumpId) {
         await this.urges.createForDump(this.dumpId);
       }
       if (this.dumpId) {
@@ -290,7 +326,8 @@ export class Dump {
       this.savedCount.set(n ? `${n} thing${n === 1 ? '' : 's'} logged` : 'note saved');
       this.doneNote.set(this.kind === 'urge' ? 'logged. that took strength.' : 'got it.');
       this.phase.set('done');
-      setTimeout(() => this.router.navigateByUrl('/'), 1800);
+      const dest = this.backfill && this.dumpId ? `/entries/${this.dumpId}` : '/';
+      setTimeout(() => this.router.navigateByUrl(dest), 1800);
     } catch (e) {
       this.fail(e);
       this.phase.set('review');

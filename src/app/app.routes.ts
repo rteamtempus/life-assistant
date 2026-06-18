@@ -15,6 +15,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/home/home').then((m) => m.Home),
       },
       {
+        path: 'dump/from/:dumpId',
+        loadComponent: () => import('./features/dump/dump').then((m) => m.Dump),
+      },
+      {
         path: 'dump/:kind',
         loadComponent: () => import('./features/dump/dump').then((m) => m.Dump),
       },
