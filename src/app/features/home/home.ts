@@ -11,7 +11,7 @@ import { RouterLink } from '@angular/router';
   imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section class="flex min-h-[calc(100dvh-4rem)] flex-col pb-4">
+    <section class="flex min-h-[calc(100dvh-5rem)] flex-col pb-6">
       <!-- The one thing: just talk. AI sorts it after. -->
       <a routerLink="/dump/adhoc" class="flex flex-1 flex-col items-center justify-center gap-5 text-center">
         <span class="flex h-28 w-28 items-center justify-center rounded-full bg-calm text-white shadow-lg shadow-calm/20 transition active:scale-95" aria-hidden="true">

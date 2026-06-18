@@ -10,7 +10,7 @@ import { Experiment } from '../../core/models';
 @Component({
   selector: 'app-experiments',
   template: `
-    <section class="flex min-h-[calc(100dvh-4rem)] flex-col py-4">
+    <section class="flex min-h-[calc(100dvh-5rem)] flex-col py-4">
       <h1 class="text-2xl font-light text-ink">experiments</h1>
       <p class="mt-1 text-ink-soft">small things you're trying. analysis tracks how they go.</p>
 
