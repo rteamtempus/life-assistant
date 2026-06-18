@@ -51,6 +51,17 @@ export class EventsService {
     return (data ?? []) as LogEvent[];
   }
 
+  /** occurred_at of the most recent event, or null if there are none at all. */
+  async mostRecentAt(): Promise<string | null> {
+    const { data, error } = await this.supabase.client
+      .from('events')
+      .select('occurred_at')
+      .order('occurred_at', { ascending: false })
+      .limit(1);
+    if (error) throw error;
+    return data?.[0]?.occurred_at ?? null;
+  }
+
   /** Manually add a single event (from the review screen). */
   async add(e: {
     category: string;

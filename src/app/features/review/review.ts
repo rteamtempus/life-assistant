@@ -34,7 +34,16 @@ interface Group {
       @if (loading()) {
         <p class="mt-8 text-ink-faint">…</p>
       } @else if (groups().length === 0) {
-        <p class="mt-8 text-ink-soft">nothing logged this day.</p>
+        @if (recentDay()) {
+          <div class="mt-8 flex flex-col items-start gap-2">
+            <p class="text-ink-soft">nothing logged this day.</p>
+            <button type="button" (click)="jumpToRecent()" class="rounded-full bg-surface px-4 py-2 text-sm text-calm ring-1 ring-mist">
+              jump to your most recent data ({{ recentLabel() }}) →
+            </button>
+          </div>
+        } @else {
+          <p class="mt-8 text-ink-soft">nothing logged yet — do a brain-dump and your data will show up here.</p>
+        }
       } @else {
         @for (g of groups(); track g.category) {
           <div class="mt-6">
@@ -107,6 +116,8 @@ export class Review implements OnInit {
   protected readonly editingId = signal<string | null>(null);
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
+  /** Day of the most recent event, when the viewed day is empty. */
+  protected readonly recentDay = signal<Date | null>(null);
 
   protected newCategory = 'food';
   protected newLabel = '';
@@ -181,11 +192,37 @@ export class Review implements OnInit {
     this.error.set(null);
     try {
       this.all.set(await this.events.listForDay(this.day().toISOString()));
+      // If this day is empty, find where the data actually is (handles events
+      // that landed on a neighbouring day, e.g. a near-midnight dump).
+      if (this.all().length === 0) {
+        const recent = await this.events.mostRecentAt();
+        if (recent) {
+          const d = new Date(recent);
+          d.setHours(0, 0, 0, 0);
+          this.recentDay.set(d.getTime() === this.day().getTime() ? null : d);
+        } else {
+          this.recentDay.set(null);
+        }
+      } else {
+        this.recentDay.set(null);
+      }
     } catch (e) {
       this.error.set(this.msg(e));
     } finally {
       this.loading.set(false);
     }
+  }
+
+  protected recentLabel(): string {
+    const d = this.recentDay();
+    return d ? d.toLocaleDateString([], { month: 'short', day: 'numeric' }) : '';
+  }
+
+  protected async jumpToRecent(): Promise<void> {
+    const d = this.recentDay();
+    if (!d) return;
+    this.day.set(d);
+    await this.refresh();
   }
 
   protected async saveEdit(e: LogEvent): Promise<void> {
