@@ -84,6 +84,12 @@ export interface Recommendation {
   rationale?: string;
 }
 
+export interface ExperimentProgress {
+  experiment: string;
+  adherence?: string;
+  effect?: string;
+}
+
 export interface Analysis {
   id: string;
   created_at: string;
@@ -96,6 +102,7 @@ export interface Analysis {
   hurt: AnalysisItem[];
   patterns: string[];
   recommendations: Recommendation[];
+  experiment_progress: ExperimentProgress[];
 }
 
 export interface Experiment {

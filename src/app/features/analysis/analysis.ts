@@ -1,5 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { AnalysisService } from '../../core/analysis.service';
+import { ExperimentsService } from '../../core/experiments.service';
 import { Analysis } from '../../core/models';
 
 /**
@@ -48,6 +49,19 @@ import { Analysis } from '../../core/models';
 
         @if (viewing()!.summary) { <p class="mt-2 leading-relaxed text-ink">{{ viewing()!.summary }}</p> }
 
+        @if (viewing()!.experiment_progress.length) {
+          <h2 class="mt-6 text-sm uppercase tracking-wide text-ink-faint">your experiments</h2>
+          <ul class="mt-2 flex flex-col gap-2">
+            @for (e of viewing()!.experiment_progress; track $index) {
+              <li class="rounded-2xl bg-surface p-3 ring-1 ring-mist">
+                <p class="text-ink">{{ e.experiment }}</p>
+                @if (e.adherence) { <p class="text-sm text-ink-soft">how it's going: {{ e.adherence }}</p> }
+                @if (e.effect) { <p class="text-sm text-ink-faint">effect: {{ e.effect }}</p> }
+              </li>
+            }
+          </ul>
+        }
+
         @if (viewing()!.helped.length) {
           <h2 class="mt-6 text-sm uppercase tracking-wide text-calm-deep">what helped</h2>
           <ul class="mt-2 flex flex-col gap-2">
@@ -88,6 +102,11 @@ import { Analysis } from '../../core/models';
               <li class="rounded-2xl bg-surface p-3 ring-1 ring-mist">
                 <p class="text-ink">{{ r.text }}</p>
                 @if (r.rationale) { <p class="text-sm text-ink-soft">{{ r.rationale }}</p> }
+                @if (added().has(r.text)) {
+                  <p class="mt-2 text-sm text-calm">added to experiments ✓</p>
+                } @else {
+                  <button type="button" (click)="tryThis(r.text, r.rationale)" class="mt-2 rounded-full bg-calm px-3 py-1.5 text-sm font-medium text-white active:scale-95">try this</button>
+                }
               </li>
             }
           </ul>
@@ -98,6 +117,8 @@ import { Analysis } from '../../core/models';
 })
 export class AnalysisPage implements OnInit {
   private readonly service = inject(AnalysisService);
+  private readonly experiments = inject(ExperimentsService);
+  protected readonly added = signal<Set<string>>(new Set());
 
   protected readonly ranges = [
     { label: 'yesterday', days: 1 },
@@ -163,4 +184,15 @@ export class AnalysisPage implements OnInit {
   protected open(a: Analysis): void {
     this.viewing.set(a);
   }
+
+  /** Turn a recommendation into a tracked experiment. */
+  protected async tryThis(text: string, rationale?: string): Promise<void> {
+    try {
+      await this.experiments.create(text, rationale ?? null, this.viewing()?.id ?? null);
+      this.added.update((s) => new Set(s).add(text));
+    } catch (e) {
+      this.error.set(e instanceof Error ? e.message : String(e));
+    }
+  }
 }
+

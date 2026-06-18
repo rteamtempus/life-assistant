@@ -35,10 +35,17 @@ const SYSTEM = [
   '',
   'Then give a few concrete, kind recommendations for what to do more / less of.',
   '',
+  'You may also be given the user\'s ACTIVE EXPERIMENTS — things they decided to',
+  'try. For each, assess honestly from the data: adherence (did they actually do',
+  'it, and how consistently) and effect (did it seem to help, hurt, or unclear).',
+  'Be encouraging about effort, never shaming about misses.',
+  '',
   'Return ONLY JSON: {"summary": string (a few warm sentences),',
   '"helped": [{"item": string, "why": string, "evidence": string}],',
   '"hurt": [{"item": string, "why": string, "evidence": string}],',
-  '"patterns": [string], "recommendations": [{"text": string, "rationale": string}]}.',
+  '"patterns": [string], "recommendations": [{"text": string, "rationale": string}],',
+  '"experiment_progress": [{"experiment": string, "adherence": string, "effect": string}]}.',
+  'If there are no active experiments, return [] for experiment_progress.',
 ].join('\n');
 
 Deno.serve(async (req) => {
@@ -54,7 +61,7 @@ Deno.serve(async (req) => {
     const endIso = `${period_end}T23:59:59.999Z`;
 
     const supabase = adminClient();
-    const [events, dumps, urges] = await Promise.all([
+    const [events, dumps, urges, experiments] = await Promise.all([
       supabase
         .from('events')
         .select('category, label, amount, unit, valence, note, occurred_at')
@@ -73,6 +80,10 @@ Deno.serve(async (req) => {
         .select('occurred_at, acted_on, what_helped')
         .gte('occurred_at', startIso)
         .lte('occurred_at', endIso),
+      supabase
+        .from('experiments')
+        .select('text, rationale, started_on')
+        .eq('status', 'active'),
     ]);
 
     const payload = {
@@ -80,6 +91,7 @@ Deno.serve(async (req) => {
       events: events.data ?? [],
       journals_and_checkins: dumps.data ?? [],
       urges: urges.data ?? [],
+      active_experiments: experiments.data ?? [],
     };
 
     const hasData =
@@ -110,7 +122,7 @@ Deno.serve(async (req) => {
     try {
       parsed = JSON.parse(raw);
     } catch {
-      parsed = { summary: raw, helped: [], hurt: [], patterns: [], recommendations: [] };
+      parsed = { summary: raw, helped: [], hurt: [], patterns: [], recommendations: [], experiment_progress: [] };
     }
 
     const { data, error } = await supabase
@@ -125,6 +137,7 @@ Deno.serve(async (req) => {
         hurt: parsed.hurt ?? [],
         patterns: parsed.patterns ?? [],
         recommendations: parsed.recommendations ?? [],
+        experiment_progress: parsed.experiment_progress ?? [],
       })
       .select()
       .single();

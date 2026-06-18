@@ -30,6 +30,10 @@ export const routes: Routes = [
         path: 'analysis',
         loadComponent: () => import('./features/analysis/analysis').then((m) => m.AnalysisPage),
       },
+      {
+        path: 'experiments',
+        loadComponent: () => import('./features/experiments/experiments').then((m) => m.Experiments),
+      },
     ],
   },
   { path: '**', redirectTo: '' },
