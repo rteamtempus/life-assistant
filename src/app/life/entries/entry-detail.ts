@@ -33,7 +33,7 @@ import { KIND_LABEL } from './entries';
         }
 
         @if (d.transcript && hasEvents() === false) {
-          <a [routerLink]="['/dump/from', d.id]" class="mt-4 inline-block rounded-2xl bg-calm-deep px-4 py-2.5 text-sm font-medium text-white">
+          <a [routerLink]="['/life/dump/from', d.id]" class="mt-4 inline-block rounded-2xl bg-calm-deep px-4 py-2.5 text-sm font-medium text-white">
             generate events from this entry
           </a>
         }
@@ -104,6 +104,6 @@ export class EntryDetail implements OnInit {
   }
 
   protected back(): void {
-    this.router.navigateByUrl('/entries');
+    this.router.navigateByUrl('/life/entries');
   }
 }

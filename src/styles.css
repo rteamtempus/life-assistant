@@ -39,6 +39,36 @@ body {
     env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
+/* ============================================================
+   Per-app themes. The super-app shell sets `data-app` on <body>
+   (CurrentAppService); each mini-app remaps the SAME token names
+   so every existing utility (bg-canvas, text-ink, bg-calm, …)
+   re-themes automatically. `life` uses the base palette above.
+   ============================================================ */
+body[data-app='tarot'] {
+  --color-canvas: #1b1430; /* deep indigo night */
+  --color-surface: #2a2147;
+  --color-ink: #ece7f5;
+  --color-ink-soft: #b6acce;
+  --color-ink-faint: #8a7fb0;
+  --color-calm: #c9a24b; /* antique gold — primary accent */
+  --color-calm-deep: #a8842f;
+  --color-warm: #d9a86c;
+  --color-mist: #3a2f5c; /* hairlines/chips on night */
+}
+
+body[data-app='work'] {
+  --color-canvas: #f4f6f8; /* cool paper */
+  --color-surface: #ffffff;
+  --color-ink: #1f2933;
+  --color-ink-soft: #52606d;
+  --color-ink-faint: #9aa5b1;
+  --color-calm: #3b6ea5; /* slate blue — primary */
+  --color-calm-deep: #2f5982;
+  --color-warm: #d9a86c;
+  --color-mist: #e1e7ec;
+}
+
 /* Menu drawer: slides in from the right; scrim fades in. */
 @keyframes drawer-in {
   from { transform: translateX(100%); }

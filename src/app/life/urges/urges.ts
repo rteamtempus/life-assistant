@@ -146,6 +146,6 @@ export class Urges implements OnInit {
 
   protected back(): void {
     this.recorder.cancel();
-    this.router.navigateByUrl('/');
+    this.router.navigateByUrl('/life');
   }
 }

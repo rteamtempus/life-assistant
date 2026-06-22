@@ -384,7 +384,7 @@ export class Dump {
       this.savedCount.set(parts.length ? `${parts.join(' · ')} logged` : 'note saved');
       this.doneNote.set(this.kind === 'urge' ? 'logged. that took strength.' : 'got it.');
       this.phase.set('done');
-      const dest = this.backfill && this.dumpId ? `/entries/${this.dumpId}` : '/';
+      const dest = this.backfill && this.dumpId ? `/life/entries/${this.dumpId}` : '/life';
       setTimeout(() => this.router.navigateByUrl(dest), 1800);
     } catch (e) {
       this.fail(e);
@@ -396,7 +396,7 @@ export class Dump {
 
   protected leave(): void {
     this.recorder.cancel();
-    this.router.navigateByUrl('/');
+    this.router.navigateByUrl('/life');
   }
 
   private fail(e: unknown): void {

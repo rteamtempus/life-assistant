@@ -1,54 +1,39 @@
+import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth.guard';
+import { CurrentAppService } from './core/current-app.service';
 
 export const routes: Routes = [
+  // Shared auth (pre-app).
   {
     path: 'sign-in',
-    loadComponent: () => import('./features/auth/sign-in').then((m) => m.SignIn),
+    loadComponent: () => import('./auth/sign-in').then((m) => m.SignIn),
   },
   {
     path: 'sign-up',
-    loadComponent: () => import('./features/auth/sign-up').then((m) => m.SignUp),
+    loadComponent: () => import('./auth/sign-up').then((m) => m.SignUp),
   },
   {
     path: '',
     canActivate: [authGuard],
     children: [
+      // Bare '/' -> the last-used mini-app's home.
       {
         path: '',
-        loadComponent: () => import('./features/home/home').then((m) => m.Home),
+        pathMatch: 'full',
+        redirectTo: () => '/' + inject(CurrentAppService).lastAppId(),
       },
       {
-        path: 'dump/from/:dumpId',
-        loadComponent: () => import('./features/dump/dump').then((m) => m.Dump),
+        path: 'life',
+        loadChildren: () => import('./life/life.routes').then((m) => m.LIFE_ROUTES),
       },
       {
-        path: 'dump/:kind',
-        loadComponent: () => import('./features/dump/dump').then((m) => m.Dump),
+        path: 'work',
+        loadChildren: () => import('./work/work.routes').then((m) => m.WORK_ROUTES),
       },
       {
-        path: 'urges',
-        loadComponent: () => import('./features/urges/urges').then((m) => m.Urges),
-      },
-      {
-        path: 'entries',
-        loadComponent: () => import('./features/entries/entries').then((m) => m.Entries),
-      },
-      {
-        path: 'entries/:id',
-        loadComponent: () => import('./features/entries/entry-detail').then((m) => m.EntryDetail),
-      },
-      {
-        path: 'review',
-        loadComponent: () => import('./features/review/review').then((m) => m.Review),
-      },
-      {
-        path: 'analysis',
-        loadComponent: () => import('./features/analysis/analysis').then((m) => m.AnalysisPage),
-      },
-      {
-        path: 'experiments',
-        loadComponent: () => import('./features/experiments/experiments').then((m) => m.Experiments),
+        path: 'tarot',
+        loadChildren: () => import('./tarot/tarot.routes').then((m) => m.TAROT_ROUTES),
       },
     ],
   },

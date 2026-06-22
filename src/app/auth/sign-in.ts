@@ -1,18 +1,16 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { SupabaseService } from '../../core/supabase.service';
+import { SupabaseService } from '../core/supabase.service';
 
 @Component({
-  selector: 'app-sign-up',
+  selector: 'app-sign-in',
   imports: [FormsModule, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="flex min-h-screen flex-col justify-center py-16">
-      <h1 class="text-3xl font-light text-ink">make it yours</h1>
-      <p class="mt-2 text-ink-soft">
-        invite-only — you'll need the code from whoever sent you here.
-      </p>
+      <h1 class="text-3xl font-light text-ink">welcome back</h1>
+      <p class="mt-2 text-ink-soft">this is just for you, and it's private.</p>
 
       @if (!supabase.isConfigured) {
         <p class="mt-6 rounded-2xl bg-mist p-4 text-sm text-ink-soft">
@@ -22,14 +20,6 @@ import { SupabaseService } from '../../core/supabase.service';
       }
 
       <form class="mt-8 flex flex-col gap-4" (ngSubmit)="submit()">
-        <input
-          name="code"
-          type="text"
-          autocomplete="off"
-          placeholder="invite code"
-          [(ngModel)]="code"
-          class="rounded-2xl border border-mist bg-surface px-4 py-3 text-ink outline-none focus:border-calm"
-        />
         <input
           name="email"
           type="email"
@@ -41,8 +31,8 @@ import { SupabaseService } from '../../core/supabase.service';
         <input
           name="password"
           type="password"
-          autocomplete="new-password"
-          placeholder="password (at least 6 characters)"
+          autocomplete="current-password"
+          placeholder="password"
           [(ngModel)]="password"
           class="rounded-2xl border border-mist bg-surface px-4 py-3 text-ink outline-none focus:border-calm"
         />
@@ -51,7 +41,7 @@ import { SupabaseService } from '../../core/supabase.service';
           [disabled]="busy()"
           class="rounded-2xl bg-calm px-4 py-3 font-medium text-white transition active:scale-[0.99] disabled:opacity-60"
         >
-          {{ busy() ? 'one moment…' : 'create account' }}
+          {{ busy() ? 'one moment…' : 'come in' }}
         </button>
       </form>
 
@@ -60,17 +50,16 @@ import { SupabaseService } from '../../core/supabase.service';
       }
 
       <p class="mt-6 text-sm text-ink-soft">
-        already have an account?
-        <a routerLink="/sign-in" class="text-calm underline">sign in</a>
+        new here?
+        <a routerLink="/sign-up" class="text-calm underline">create an account</a>
       </p>
     </section>
   `,
 })
-export class SignUp {
+export class SignIn {
   protected readonly supabase = inject(SupabaseService);
   private readonly router = inject(Router);
 
-  protected code = '';
   protected email = '';
   protected password = '';
   protected readonly busy = signal(false);
@@ -80,26 +69,12 @@ export class SignUp {
     this.error.set(null);
     this.busy.set(true);
     try {
-      const email = this.email.trim();
-      // 1. Create the account through the invite-gated Edge Function.
-      const { data, error } = await this.supabase.signUpWithInvite(
-        email,
-        this.password,
-        this.code.trim(),
-      );
-      // Edge Function errors (bad code, duplicate email) come back in the body.
-      const bodyError = (data as { error?: string } | null)?.error;
-      if (error || bodyError) {
-        this.error.set(bodyError ?? error?.message ?? 'Could not create the account.');
-        return;
-      }
-      // 2. The account is confirmed and ready — sign in and go.
-      const { error: signInError } = await this.supabase.signInWithPassword(
-        email,
+      const { error } = await this.supabase.signInWithPassword(
+        this.email.trim(),
         this.password,
       );
-      if (signInError) {
-        this.error.set(signInError.message);
+      if (error) {
+        this.error.set(error.message);
         return;
       }
       await this.router.navigateByUrl('/');

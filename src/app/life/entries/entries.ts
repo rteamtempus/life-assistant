@@ -28,7 +28,7 @@ export const KIND_LABEL: Record<DumpKind, string> = {
         <ul class="mt-6 flex flex-col gap-2">
           @for (d of dumps(); track d.id) {
             <li>
-              <a [routerLink]="['/entries', d.id]" class="block rounded-2xl bg-surface px-4 py-3 ring-1 ring-mist transition active:scale-[0.99]">
+              <a [routerLink]="['/life/entries', d.id]" class="block rounded-2xl bg-surface px-4 py-3 ring-1 ring-mist transition active:scale-[0.99]">
                 <div class="flex items-baseline justify-between">
                   <span class="text-ink">{{ kindLabel(d.kind) }}</span>
                   <span class="text-xs text-ink-faint">{{ when(d.created_at) }}</span>

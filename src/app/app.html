@@ -9,10 +9,10 @@
 
 @if (supabase.session()) {
   <header class="mx-auto flex w-full max-w-md items-center justify-between px-5 py-5">
-    <a routerLink="/" class="flex items-center gap-2.5">
+    <button type="button" (click)="cycleApp()" [attr.aria-label]="'Switch app (current: ' + current().title + ')'" class="flex items-center gap-2.5 active:scale-95">
       <img src="icons/icon-192x192.png" alt="" class="h-9 w-9 rounded-xl" />
-      <span class="text-lg font-light tracking-tight text-ink">Life Assistant</span>
-    </a>
+      <span class="text-lg font-light tracking-tight text-ink">{{ current().title }}</span>
+    </button>
     <button type="button" (click)="toggle()" aria-label="menu" class="rounded-lg p-2 text-ink-soft active:scale-95">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
         <line x1="4" y1="7" x2="20" y2="7" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="17" x2="20" y2="17" />
@@ -24,13 +24,10 @@
 @if (menuOpen()) {
   <div class="scrim fixed inset-0 z-40 bg-ink/30" (click)="close()"></div>
   <nav class="drawer-panel fixed inset-y-0 right-0 z-50 flex w-72 max-w-[80%] flex-col gap-1 bg-canvas p-5 shadow-xl">
-    <p class="px-3 pb-3 pt-1 text-lg font-light text-ink">Menu</p>
-    <a routerLink="/" (click)="close()" class="rounded-xl px-3 py-3 text-ink-soft active:bg-mist">Home</a>
-    <a routerLink="/entries" (click)="close()" class="rounded-xl px-3 py-3 text-ink-soft active:bg-mist">Entries</a>
-    <a routerLink="/review" (click)="close()" class="rounded-xl px-3 py-3 text-ink-soft active:bg-mist">Review your data</a>
-    <a routerLink="/analysis" (click)="close()" class="rounded-xl px-3 py-3 text-ink-soft active:bg-mist">Analysis</a>
-    <a routerLink="/experiments" (click)="close()" class="rounded-xl px-3 py-3 text-ink-soft active:bg-mist">Experiments</a>
-    <a routerLink="/urges" (click)="close()" class="rounded-xl px-3 py-3 text-ink-soft active:bg-mist">Urges</a>
+    <p class="px-3 pb-3 pt-1 text-lg font-light text-ink">{{ current().title }}</p>
+    @for (item of current().menu; track item.path) {
+      <a [routerLink]="item.path" (click)="close()" class="rounded-xl px-3 py-3 text-ink-soft active:bg-mist">{{ item.label }}</a>
+    }
     <div class="mt-auto border-t border-mist pt-2">
       <button type="button" (click)="signOut()" class="w-full rounded-xl px-3 py-3 text-left text-ink-faint active:bg-mist">Sign out</button>
     </div>
