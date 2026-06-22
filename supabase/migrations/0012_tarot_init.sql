@@ -82,6 +82,19 @@ create table tarot_interpretation_sets (
 create trigger trg_tarot_sets_updated before update on tarot_interpretation_sets
   for each row execute function tarot_set_updated_at();
 
+-- Builds the theme-search vector (keywords weighted 'A' over prose 'B'). Wrapped
+-- in an IMMUTABLE function because a generated column requires an immutable
+-- expression, and to_tsvector(regconfig, …) is only trusted as immutable when
+-- the config is pinned this way.
+create function tarot_interp_search(
+  up_kw text[], rev_kw text[], up_txt text, rev_txt text
+) returns tsvector language sql immutable as $$
+  select setweight(to_tsvector('english',
+           array_to_string(up_kw, ' ') || ' ' || array_to_string(rev_kw, ' ')), 'A')
+      || setweight(to_tsvector('english',
+           coalesce(up_txt, '') || ' ' || coalesce(rev_txt, '')), 'B');
+$$;
+
 create table tarot_interpretations (
   id               uuid primary key default gen_random_uuid(),
   set_id           uuid not null references tarot_interpretation_sets(id) on delete cascade,
@@ -92,13 +105,8 @@ create table tarot_interpretations (
   reversed_keywords text[] not null default '{}',
   updated_at       timestamptz not null default now(),  -- powers offline cache invalidation
   -- full-text column powers "which cards are about change?" theme search.
-  -- keywords are weighted 'A' (primary match target) over the prose 'B'.
   search tsvector generated always as (
-    setweight(to_tsvector('english',
-      array_to_string(upright_keywords, ' ') || ' ' ||
-      array_to_string(reversed_keywords, ' ')), 'A')
-    || setweight(to_tsvector('english',
-      coalesce(upright_text,'') || ' ' || coalesce(reversed_text,'')), 'B')
+    tarot_interp_search(upright_keywords, reversed_keywords, upright_text, reversed_text)
   ) stored,
   unique (set_id, card_id)
 );
