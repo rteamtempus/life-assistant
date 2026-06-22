@@ -59,6 +59,16 @@ export class SupabaseService {
     return this.client.auth.signInWithPassword({ email, password });
   }
 
+  /**
+   * Gated sign-up. Public sign-up is disabled at the Auth layer, so account
+   * creation goes through the `invite-signup` Edge Function, which requires the
+   * shared invite code. On success the account exists and is confirmed; the
+   * caller then signs in normally.
+   */
+  signUpWithInvite(email: string, password: string, code: string) {
+    return this.invoke<{ ok: boolean }>('invite-signup', { email, password, code });
+  }
+
   signOut() {
     return this.client.auth.signOut();
   }

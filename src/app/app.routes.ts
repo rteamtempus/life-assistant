@@ -7,6 +7,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/sign-in').then((m) => m.SignIn),
   },
   {
+    path: 'sign-up',
+    loadComponent: () => import('./features/auth/sign-up').then((m) => m.SignUp),
+  },
+  {
     path: '',
     canActivate: [authGuard],
     children: [

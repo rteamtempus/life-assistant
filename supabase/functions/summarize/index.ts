@@ -7,6 +7,7 @@
 
 import { corsHeaders, json } from '../_shared/cors.ts';
 import { adminClient } from '../_shared/supabase-admin.ts';
+import { getUserId } from '../_shared/auth.ts';
 import { callGemini, MODELS } from '../_shared/gemini.ts';
 
 const SYSTEM = [
@@ -30,11 +31,16 @@ Deno.serve(async (req) => {
     const { dump_id }: Body = await req.json();
     if (!dump_id) return json({ error: 'dump_id required' }, 400);
 
+    // Scope to the caller so a user can only summarize their own dumps.
+    const userId = await getUserId(req);
+    if (!userId) return json({ error: 'unauthorized' }, 401);
+
     const supabase = adminClient();
     const { data: dump, error } = await supabase
       .from('dumps')
       .select('id, kind, transcript')
       .eq('id', dump_id)
+      .eq('user_id', userId)
       .single();
     if (error || !dump?.transcript) {
       return json({ error: 'dump not found or has no transcript' }, 404);
@@ -54,7 +60,8 @@ Deno.serve(async (req) => {
     const { error: upErr } = await supabase
       .from('dumps')
       .update({ summary })
-      .eq('id', dump_id);
+      .eq('id', dump_id)
+      .eq('user_id', userId);
     if (upErr) return json({ error: upErr.message }, 500);
 
     return json({ summary });

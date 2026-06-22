@@ -9,6 +9,7 @@
 
 import { corsHeaders, json } from '../_shared/cors.ts';
 import { adminClient } from '../_shared/supabase-admin.ts';
+import { getUserId } from '../_shared/auth.ts';
 import { callGemini, MODELS } from '../_shared/gemini.ts';
 
 interface Body {
@@ -57,6 +58,13 @@ Deno.serve(async (req) => {
     if (!period_start || !period_end) {
       return json({ error: 'period_start and period_end (YYYY-MM-DD) required' }, 400);
     }
+
+    // Who is asking? The admin client bypasses RLS, so we MUST scope every read
+    // (and the saved analysis) to the caller — otherwise reports would blend
+    // multiple users' data.
+    const userId = await getUserId(req);
+    if (!userId) return json({ error: 'unauthorized' }, 401);
+
     const startIso = `${period_start}T00:00:00.000Z`;
     const endIso = `${period_end}T23:59:59.999Z`;
 
@@ -65,12 +73,14 @@ Deno.serve(async (req) => {
       supabase
         .from('events')
         .select('category, label, amount, unit, valence, note, occurred_at')
+        .eq('user_id', userId)
         .gte('occurred_at', startIso)
         .lte('occurred_at', endIso)
         .order('occurred_at', { ascending: true }),
       supabase
         .from('dumps')
         .select('kind, occurred_at, transcript, summary')
+        .eq('user_id', userId)
         .not('transcript', 'is', null)
         .gte('occurred_at', startIso)
         .lte('occurred_at', endIso)
@@ -78,11 +88,13 @@ Deno.serve(async (req) => {
       supabase
         .from('urges')
         .select('occurred_at, kind, acted_on, trigger, what_helped, intensity')
+        .eq('user_id', userId)
         .gte('occurred_at', startIso)
         .lte('occurred_at', endIso),
       supabase
         .from('experiments')
         .select('text, rationale, started_on')
+        .eq('user_id', userId)
         .eq('status', 'active'),
     ]);
 
@@ -133,6 +145,7 @@ Deno.serve(async (req) => {
     const { data, error } = await supabase
       .from('analyses')
       .insert({
+        user_id: userId,
         period_start,
         period_end,
         trigger: trigger ?? 'manual',
